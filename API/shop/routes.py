@@ -6,7 +6,7 @@ import secrets
 import datetime
 import jwt
 import os
-from ..utils import shop_login_required
+from ..utils import shop_login_required, send_password_reset_email, generate_reset_token, verify_token
 
 shops = Blueprint('shops', __name__)
 
@@ -68,12 +68,12 @@ def shop_signup():
 
     shop = BarberShop(
         public_id=public_id,
-        shop_name=data["name"].strip(),
+        shop_name=data["name"].strip().title(),
         email=data["email"].strip(),
         password=password_hash,
         phone=data["phone"].strip(),
-        county=data["county"].strip(),
-        city=data["city"].strip()
+        county=data["county"].strip().title(),
+        city=data["city"].strip().title()
     )
     db.session.add(shop)
     db.session.commit()
@@ -106,6 +106,22 @@ def shop_login():
         return make_response("Incorrect password", 401, {"WWW.Authenticate": "Basic realm=Login required!"})
 
 
+@shops.route("/API/shop/update/<string:public_id>", methods=["POST"])
+@shop_login_required
+def update_shop(current_user, public_id):
+    if current_user.public_id != public_id:
+        return jsonify(dict(message="You do not have permissions to perform this action")), 401
+    shop = BarberShop.query.filter_by(public_id=public_id).first()
+    data = request.get_json()
+    shop.shop_name = data["name"].strip().title()
+    shop.email = data["email"].strip()
+    shop.phone = data["phone"].strip()
+    shop.county = data["county"].strip().title()
+    shop.city = data["city"].strip().title()
+    db.session.commit()
+    return jsonify(dict(message="Update Successful")), 200
+
+
 @shops.route("/API/token/verify", methods=["POST"])
 def verify_login_token():
     """
@@ -136,3 +152,42 @@ def verify_login_token():
         return jsonify(dict(message="Token has expired")), 401
     except jwt.InvalidTokenError:
         return jsonify(dict(message="Invalid token")), 401
+
+
+@shops.route("/API/shop/password/request-reset", methods=["POST"])
+def request_password_reset():
+    """
+        Reset password.
+        :return: 404, 500, 200
+    """
+    data = request.get_json()
+    shop = BarberShop.query.filter_by(email=data["email"]).first()
+    if not shop:
+        return jsonify(dict(message="Email doesn't exist")), 404
+    else:
+        reset_token = generate_reset_token(shop.public_id)
+        reset_url = f"https://www.mykinyozi.com/reset/{reset_token}"
+        try:
+            send_password_reset_email(recipient=shop.email, reset_url=reset_url, name=shop.shop_name)
+        except:
+            return jsonify(dict(message="An error occurred. Please try again")), 500
+        else:
+            return jsonify(dict(message="Reset link has been sent to your email.")), 200
+
+
+@shops.route("/API/shop/password/reset/<string:reset_token>", methods=["POST"])
+def reset_password(reset_token):
+    """
+        Reset shop password
+        :param reset_token: Password reset token
+        :return:
+    """
+    shop = verify_token(reset_token)
+    if not shop:
+        return jsonify(dict(message="Token invalid or expired")), 403
+
+    data = request.get_json()
+    password_hash = bcrypt.generate_password_hash(data["password"].strip()).decode("utf-8")
+    shop.password = password_hash
+    db.session.commit()
+    return jsonify(dict(message="Password reset successful")), 200
