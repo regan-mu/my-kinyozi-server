@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400&display=swap" rel="stylesheet">
+    <!-- <link rel="stylesheet" href="./styles.css"> -->
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+            color: #000;
+        }
+        body {
+            background-color: #151522;
+            height: 100vh;
+            width: 100%;
+            position: relative;
+        }
+
+        .mail__main {
+            background-color: rgb(240, 240, 240);
+            height: 80vh;
+            width: 60%;
+            border: 0.1px solid #414141;
+            border-radius: 12px;
+            margin: 48px auto 0;
+        }
+        .mail__header {
+            width: 100%;
+            height: auto;
+            text-align: center;
+            font-weight: bold;
+            background-color: #fff;
+            font-size: 1.8rem;
+            background-color: #22222f;
+            color: #fff;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            padding: 32px 0;
+        }
+        .mail__header a {
+            color: #fff;
+            text-decoration: none;
+        }
+        .mail__body {
+            margin: 16px 0 0;
+            padding: 0 32px;
+        }
+        .mail__body h3 {
+            margin: 0 0 8px;
+        }
+        .mail__body p {
+            font-weight: 400;
+        }
+        .mail__intro a {
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #7f56d9;
+        }
+        .mail__body span {
+            color: #7f56d9;
+            font-weight: bolder;
+        }
+        .link__container {
+            width: 100%;
+            text-align: center;
+        }
+        .link__container a {
+            text-decoration: none;
+            padding: 8px 24px;
+            border-radius: 16px;
+            background-color: #7f56d9;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            height: max-content;
+        }
+        @media screen and (max-width: 900px)  {
+            .mail__main {
+                width: 95%;
+                height: 80vh;
+
+            }
+            .mail__header {
+                font-size: 1.3rem;
+            }
+            .mail__body {
+                margin: 0;
+                padding: 32px 16px;
+            }
+            .mail__body p {
+                font-weight: 300;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+    
+</head>
+<body>
+    <div class="mail__main">
+        <div class="main__header">
+            <h1 class="mail__header"><a href="https://www.mykinyozi.com">My Kinyozi App</a></h1>
+        </div>
+        <div class="mail__body">
+            <h3>{{name}},</h3>
+            <p class="mail__intro">
+                We hope this message finds you well. 
+                We would like to inform you that the stock of <strong>{{inventory}}</strong> in your barbershop is currently running
+                <strong>{{level}}</strong>. To ensure a seamless experience for both you and your customers, 
+                we kindly recommend replenishing this product at your earliest convenience.
+            </p>
+            <p>
+                <br />
+                <br />
+                <strong>
+                    Best,
+                    <br />
+                    The Kinyozi App Team
+                </strong>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

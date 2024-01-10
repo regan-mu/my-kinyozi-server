@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from API.models import ExpenseAccounts, BarberShop, Expenses
 from API import db
 import datetime
-from ..utils import shop_login_required
+from ..utils import shop_login_required, verify_api_key
 from ..serializer import serialize_accounts, serialize_expenses
 
 expenses = Blueprint('expenses', __name__)
@@ -38,6 +38,7 @@ def create_expense_account(current_user, public_id):
 
 
 @expenses.route("/API/expense-accounts/fetch/<string:public_id>", methods=["GET"])
+@verify_api_key
 def fetch_all_expense_accounts(public_id):
     """
         Fetch all expense accounts for a certain shop

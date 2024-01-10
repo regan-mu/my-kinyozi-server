@@ -20,6 +20,8 @@ class BarberShop(db.Model):
     services = db.relationship("Service", backref="shop", lazy="dynamic", cascade='all, delete-orphan')
     inventory = db.relationship("Inventory", backref="shop", lazy="dynamic", cascade='all, delete-orphan')
     expense_accounts = db.relationship("ExpenseAccounts", backref="shop", lazy="dynamic", cascade='all, delete-orphan')
+    notifications = db.relationship("Notification", backref="shop", lazy="dynamic", cascade='all, delete-orphan')
+    equipments = db.relationship("Equipment", backref="shop", lazy="dynamic", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"({self.name}, {self.email})"
@@ -31,7 +33,7 @@ class Inventory(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     product_name = db.Column(db.String(100), nullable=False)
-    product_level = db.Column(db.String(20), nullable=False)
+    product_level = db.Column(db.Integer, nullable=False)
     modified_at = db.Column(db.DateTime)
     shop_id = db.Column(db.Integer, db.ForeignKey("barbershops.id"))
 
@@ -102,3 +104,32 @@ class Expenses(db.Model):
 
     def __repr__(self):
         return f"Expense({self.expense})"
+
+
+class Equipment(db.Model):
+    """Barber shop Equipment"""
+    __tablename__ = "equipments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    faulty = db.Column(db.Boolean, default=False)
+    bought_on = db.Column(db.DateTime)
+    price = db.Column(db.Integer, nullable=False)
+    shop_id = db.Column(db.Integer, db.ForeignKey("barbershops.id"))
+
+    def __repr__(self):
+        return f"Equipment({self.equipment_name})"
+
+
+class Notification(db.Model):
+    """Notifications"""
+    __tablename__ = "notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    shop_id = db.Column(db.Integer, db.ForeignKey("barbershops.id"))
+    read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+

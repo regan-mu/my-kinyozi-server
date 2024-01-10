@@ -3,6 +3,7 @@ from flask_restful import fields, marshal
 
 def serialize_shop(shop):
     user_fields = {
+        'id': fields.Integer,
         'public_id': fields.String,
         'shop_name': fields.String,
         'email': fields.String,
@@ -18,7 +19,7 @@ def serialize_inventory(inventory):
     inventory_fields = {
         "id": fields.Integer,
         "product_name": fields.String,
-        "product_level": fields.String,
+        "product_level": fields.Integer,
         "modified_at": fields.DateTime
     }
     return marshal(inventory, inventory_fields)
@@ -66,3 +67,27 @@ def serialize_expenses(expense):
         modified_at=fields.DateTime
     )
     return marshal(expense, expense_fields)
+
+
+def serialize_notification(notification):
+    notification_fields = dict(
+        id=fields.Integer,
+        title=fields.String,
+        message=fields.String,
+        shop_id=fields.Integer,
+        read=fields.Boolean,
+        created_at=fields.DateTime
+    )
+    return marshal(notification, notification_fields)
+
+
+def serialize_equipment(equipment):
+    equipment_fields = dict(
+        id=fields.Integer,
+        equipment_name=fields.String,
+        description=fields.String,
+        faulty=fields.Boolean,
+        bought_on=fields.DateTime,
+        price=fields.Integer
+    )
+    return marshal(equipment, equipment_fields)

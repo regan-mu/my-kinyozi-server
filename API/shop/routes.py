@@ -6,7 +6,7 @@ import secrets
 import datetime
 import jwt
 import os
-from ..utils import shop_login_required, send_password_reset_email, generate_reset_token, verify_token
+from ..utils import shop_login_required, send_password_reset_email, generate_reset_token, verify_token, verify_api_key
 
 shops = Blueprint('shops', __name__)
 
@@ -16,7 +16,7 @@ shops = Blueprint('shops', __name__)
 def get_shop(current_user, public_id):
     """
         Fetch all info about a barbershop
-        :param current_user: Current logged in user
+        :param current_user: Current logged-in user
         :param public_id: Barbershop public_id
         :return: 401, 404, 200
     """
@@ -33,6 +33,7 @@ def get_shop(current_user, public_id):
 
 
 @shops.route("/API/shops/all", methods=["GET"])
+@verify_api_key
 def all_shops():
     """
         Fetch all barbershops
@@ -48,6 +49,7 @@ def all_shops():
 
 
 @shops.route("/API/create/shop", methods=["POST"])
+@verify_api_key
 def shop_signup():
     """
         Create a new barbershop
@@ -81,6 +83,7 @@ def shop_signup():
 
 
 @shops.route("/API/login/shop", methods=["POST"])
+@verify_api_key
 def shop_login():
     """
        Logs the shop owner's in using their email and password
@@ -109,6 +112,12 @@ def shop_login():
 @shops.route("/API/shop/update/<string:public_id>", methods=["POST"])
 @shop_login_required
 def update_shop(current_user, public_id):
+    """
+        Update shop info
+        :param current_user: Currently logged-in user
+        :param public_id: shop public id
+        :return: 401, 200
+    """
     if current_user.public_id != public_id:
         return jsonify(dict(message="You do not have permissions to perform this action")), 401
     shop = BarberShop.query.filter_by(public_id=public_id).first()
@@ -123,6 +132,7 @@ def update_shop(current_user, public_id):
 
 
 @shops.route("/API/token/verify", methods=["POST"])
+@verify_api_key
 def verify_login_token():
     """
         Verify that JWT token is valid
@@ -155,6 +165,7 @@ def verify_login_token():
 
 
 @shops.route("/API/shop/password/request-reset", methods=["POST"])
+@verify_api_key
 def request_password_reset():
     """
         Reset password.
@@ -176,11 +187,12 @@ def request_password_reset():
 
 
 @shops.route("/API/shop/password/reset/<string:reset_token>", methods=["POST"])
+@verify_api_key
 def reset_password(reset_token):
     """
         Reset shop password
         :param reset_token: Password reset token
-        :return:
+        :return: 404, 200
     """
     shop = verify_token(reset_token)
     if not shop:

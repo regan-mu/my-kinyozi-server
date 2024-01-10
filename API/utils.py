@@ -1,7 +1,7 @@
 import jwt
 import os
 from API.models import BarberShop
-from flask import request, jsonify
+from flask import request, jsonify, render_template
 from functools import wraps
 import datetime
 from flask_mail import Message
@@ -26,9 +26,24 @@ def verify_token(token):
 
 
 def shop_login_required(f):
+    """
+        Check is logged in
+        :param f: route fuction
+        :return:
+    """
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
+        api_key = None
+        if "X-API-KEY" in request.headers:
+            api_key = request.headers["X-API-KEY"]
+
+        if not api_key:
+            return jsonify({"message": "API KEY is missing"}), 401
+
+        if api_key != os.environ.get("API_KEY"):
+            return jsonify({"message": "Invalid API KEY"}), 401
+
         if "x-access-token" in request.headers:
             token = request.headers["x-access-token"]
         if not token:
@@ -44,6 +59,22 @@ def shop_login_required(f):
     return decorated
 
 
+def verify_api_key(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        api_key = None
+        if "X-API-KEY" in request.headers:
+            api_key = request.headers["X-API-KEY"]
+
+        if not api_key:
+            return jsonify({"message": "API KEY is missing"}), 401
+
+        if api_key != os.environ.get("API_KEY"):
+            return jsonify({"message": "Invalid API KEY"}), 401
+        return func(*args, **kwargs)
+    return decorated
+
+
 def send_password_reset_email(recipient, reset_url, name):
     """
         Send password reset email
@@ -53,18 +84,7 @@ def send_password_reset_email(recipient, reset_url, name):
         :return: None
     """
     message = Message("My Kinyozi App password reset", sender="communication@mykinyozi.com", recipients=[recipient])
-    message.body = f"""Hello {name.title()},
-You are receiving this email because you requested a password reset for your My Kinyozi account.
-Click on the link below to reset your password. If the link is not clickable, \
-copy and paste it on your browser's address bar.\n
-{reset_url}
-
-Note: The password reset link is valid for 30 minutes only. If you did not initiate a password reset, \
-please disregard and delete this email.
-\n
-Best,
-The Kinyozi App Team
-"""
+    message.html = render_template("reset.html", name=name, url=reset_url)
     mail.send(message)
 
 
@@ -83,3 +103,38 @@ def generate_reset_token(public_id):
         algorithm="HS256"
     )
     return reset_token
+
+
+def send_low_inventory_email(recipient, inventory_name, shop_name, level):
+    """
+        Send email to owner when a product is marked as running low.
+        :param recipient: Owner email.
+        :param inventory_name: inventory running low.
+        :param shop_name: name of the barbershop.
+        :param level: Inventory level
+        :return: None
+    """
+    levels = {
+        "1": "CRITICALLY LOW",
+        "2": "LOW",
+        "3": "NORMAL"
+    }
+
+    message = Message(
+        f"KINYOZI APP ALERT: PRODUCT RUNNING {levels[level]}",
+        sender="communication@mykinyozi.com",
+        recipients=[recipient]
+    )
+    message.html = render_template("inventory.html", name=shop_name, inventory=inventory_name, level=levels[level])
+    mail.send(message)
+
+
+def test_html():
+    message = Message(
+        f"KINYOZI APP ALERT: PRODUCT RUNNING TEST",
+        sender="communication@mykinyozi.com",
+        recipients=["regansomi@gmail.com"]
+    )
+    message.body = "test"
+    message.html = render_template("reset.html", name="Regan")
+    mail.send(message)

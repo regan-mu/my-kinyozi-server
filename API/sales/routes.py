@@ -2,14 +2,14 @@ import datetime
 from flask import Blueprint, request, jsonify
 from API import db
 from API.models import Sale, BarberShop
-from ..utils import shop_login_required
+from ..utils import shop_login_required, verify_api_key
 from ..serializer import serialize_sales
 
 sales = Blueprint("sales", __name__)
 
 
 @sales.route("/API/sales/create/<string:public_id>", methods=["POST"])
-@shop_login_required
+@verify_api_key
 def record_sale(current_user, public_id):
     """
         Record a new sale

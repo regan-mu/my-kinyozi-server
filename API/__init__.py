@@ -29,10 +29,14 @@ def create_app():  # config_class=Config
     from API.expenses.routes import expenses
     from API.sales.routes import sales
     from API.inventory.routes import inventory
+    from API.notifications.routes import notifications_blueprint
+    from API.equipment.routes import equipment_blueprint
     app.register_blueprint(shops)
     app.register_blueprint(services)
     app.register_blueprint(expenses)
     app.register_blueprint(sales)
     app.register_blueprint(inventory)
+    app.register_blueprint(notifications_blueprint)
+    app.register_blueprint(equipment_blueprint)
 
     return app

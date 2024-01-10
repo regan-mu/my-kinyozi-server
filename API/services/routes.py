@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
-from API.models import Service
+from API.models import Service, BarberShop
 from API import db
 import datetime
-from ..utils import shop_login_required
+from ..utils import shop_login_required, verify_api_key
+from ..serializer import serialize_services
 
 services = Blueprint('services', __name__)
 
@@ -86,3 +87,13 @@ def delete_service(current_user, service_id):
     db.session.delete(service)
     db.session.commit()
     return jsonify(dict(message="Service deleted successfully")), 200
+
+
+@services.route("/API/services/all/<string:public_id>", methods=["GET"])
+@verify_api_key
+def fetch_all_services(public_id):
+    shop = BarberShop.query.filter_by(public_id=public_id).first()
+    all_services = []
+    for service in shop.services:
+        all_services.append(serialize_services(service))
+    return jsonify(dict(services=all_services))
