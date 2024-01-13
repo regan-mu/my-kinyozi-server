@@ -46,8 +46,9 @@ def all_shops():
         Fetch all barbershops
         :return: 200
     """
-    name = request.args.get("name").strip().title()
-    shops_all = BarberShop.query.filter_by(shop_name=name).order_by(BarberShop.shop_name.desc()).all()
+    name = request.args.get("name", "").strip().title()
+    shops_all = BarberShop.query.filter(BarberShop.shop_name.ilike(f'{name}%'))\
+        .order_by(BarberShop.shop_name.desc()).all()
     shops_data = []
     for shop in shops_all[:10]:
         shops_data.append(serialize_shop(shop))
