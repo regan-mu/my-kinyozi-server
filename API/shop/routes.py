@@ -47,7 +47,7 @@ def all_shops():
         :return: 200
     """
     name = request.args.get("name", "").strip().title()
-    shops_all = BarberShop.query.filter(BarberShop.shop_name.ilike(f'{name}%'))\
+    shops_all = BarberShop.query.filter(BarberShop.shop_name.ilike(f'%{name}%'))\
         .order_by(BarberShop.shop_name.desc()).all()
     shops_data = []
     for shop in shops_all[:10]:
