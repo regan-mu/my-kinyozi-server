@@ -19,7 +19,7 @@ def create_notification():
         return jsonify(dict(message="Missing data")), 400
 
     notification = Notification(
-        title=data["title"].strip.title(),
+        title=data["title"].strip().title(),
         message=data["message"].strip(),
         shop_id=data["shopId"]
     )

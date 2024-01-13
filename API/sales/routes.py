@@ -63,6 +63,7 @@ def fetch_sales(current_user, public_id, month, year):
         for sale in service_sales:
             sale_data = serialize_sales(sale)
             sale_data["amount"] = service.charges
+            sale_data["service"] = service.service
             all_shop_sales.append(sale_data)
 
     return jsonify(dict(sales=all_shop_sales)), 200

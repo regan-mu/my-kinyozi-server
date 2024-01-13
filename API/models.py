@@ -22,6 +22,7 @@ class BarberShop(db.Model):
     expense_accounts = db.relationship("ExpenseAccounts", backref="shop", lazy="dynamic", cascade='all, delete-orphan')
     notifications = db.relationship("Notification", backref="shop", lazy="dynamic", cascade='all, delete-orphan')
     equipments = db.relationship("Equipment", backref="shop", lazy="dynamic", cascade="all, delete-orphan")
+    employees = db.relationship("Employee", backref="shop", lazy="dynamic", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"({self.name}, {self.email})"
@@ -133,3 +134,22 @@ class Notification(db.Model):
     read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
+class Employee(db.Model):
+    """Employee table"""
+    __tablename__ = "employees"
+
+    id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(20), nullable=False)
+    f_name = db.Column(db.String(20), nullable=False)
+    l_name = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(50), nullable=False)
+    role = db.Column(db.String(20), nullable=False)
+    password = db.Column(db.Text, nullable=True)
+    salary = db.Column(db.Integer, nullable=True)
+    create_date = db.Column(db.DateTime, default=datetime.utcnow)
+    active = db.Column(db.Boolean, default=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey("barbershops.id"))
+
+    def __repr__(self):
+        return f"Employee({self.f_name}, {self.l_name})"

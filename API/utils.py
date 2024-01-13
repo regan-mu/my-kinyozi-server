@@ -129,12 +129,22 @@ def send_low_inventory_email(recipient, inventory_name, shop_name, level):
     mail.send(message)
 
 
-def test_html():
+def send_employee_created_email(recipient, name, url, shop_name):
+    """
+        Send email to employee after they are created by owner.
+        The email contains the signup url that they can use to set up their password
+        :param recipient: Employee email address
+        :param name: Employee first name
+        :param url: Employee signup url
+        :param shop_name: Name of the Barber shop the employee belongs
+        :return: None
+    """
     message = Message(
-        f"KINYOZI APP ALERT: PRODUCT RUNNING TEST",
+        f"{shop_name.upper()} sign up.",
         sender="communication@mykinyozi.com",
-        recipients=["regansomi@gmail.com"]
+        recipients=[recipient]
     )
-    message.body = "test"
-    message.html = render_template("reset.html", name="Regan")
+    message.html = render_template("create_employee_email.html", name=name, url=url, shop_name=shop_name)
     mail.send(message)
+
+

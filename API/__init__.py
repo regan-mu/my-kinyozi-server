@@ -31,6 +31,7 @@ def create_app():  # config_class=Config
     from API.inventory.routes import inventory
     from API.notifications.routes import notifications_blueprint
     from API.equipment.routes import equipment_blueprint
+    from API.employees.routes import employees_blueprint
     app.register_blueprint(shops)
     app.register_blueprint(services)
     app.register_blueprint(expenses)
@@ -38,5 +39,6 @@ def create_app():  # config_class=Config
     app.register_blueprint(inventory)
     app.register_blueprint(notifications_blueprint)
     app.register_blueprint(equipment_blueprint)
+    app.register_blueprint(employees_blueprint)
 
     return app

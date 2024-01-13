@@ -1,12 +1,19 @@
 from flask import Blueprint, request, jsonify, make_response
-from API.models import BarberShop, Service
+from API.models import BarberShop, Service, Employee
 from API import db, bcrypt
 from API.serializer import serialize_shop, serialize_services
 import secrets
 import datetime
 import jwt
 import os
-from ..utils import shop_login_required, send_password_reset_email, generate_reset_token, verify_token, verify_api_key
+from ..utils import (
+    shop_login_required,
+    send_password_reset_email,
+    generate_reset_token,
+    verify_token,
+    verify_api_key,
+    send_employee_created_email
+)
 
 shops = Blueprint('shops', __name__)
 
@@ -203,3 +210,70 @@ def reset_password(reset_token):
     shop.password = password_hash
     db.session.commit()
     return jsonify(dict(message="Password reset successful")), 200
+
+
+@shops.route("/API/shop/password/change/<string:public_id>", methods=["POST"])
+@shop_login_required
+def change_password(current_user, public_id):
+    """
+        Change shop password
+        :param current_user: Currently logged-in user
+        :param public_id: Shop public ID
+        :return: 401, 200
+    """
+    if current_user.public_id != public_id:
+        return jsonify(dict(message="Not Allowed")), 401
+
+    data = request.get_json()
+    if bcrypt.check_password_hash(current_user.password, data["oldPassword"].strip()):
+        current_user.password = bcrypt.generate_password_hash(data["newPassword"].strip()).decode("utf-8")
+        db.session.commit()
+        return jsonify(dict(message="Password Change Successful")), 200
+    else:
+        return jsonify(dict(message="Old password is Incorrect")), 401
+
+
+@shops.route("/API/shop/employee/create/<string:public_id>", methods=["POST"])
+@shop_login_required
+def create_employee(current_user, public_id):
+    """
+        Create new Employee from shop dashboard
+        :param current_user: Currently logged-in user
+        :param public_id: Shop public ID
+        :return: 401, 201
+    """
+    if current_user.public_id != public_id:
+        return jsonify(dict(message="Not Allowed")), 401
+
+    data = request.get_json()
+    check_employee = Employee.query.filter_by(email=data["email"].strip().lower()).first()
+    if check_employee:
+        return jsonify(dict(message="Email already exists")), 409
+
+    employee_public_id = secrets.token_hex(6)
+    matching_public_id_found = Employee.query.filter_by(public_id=employee_public_id).first()
+    if matching_public_id_found:
+        employee_public_id = secrets.token_hex(6) + secrets.token_hex(1)
+
+    employee = Employee(
+        f_name=data["fName"].strip().title(),
+        l_name=data["lName"].strip().title(),
+        public_id=employee_public_id,
+        email=data["email"].strip().lower(),
+        role=data["role"].strip().title(),
+        salary=data["salary"],
+        shop_id=current_user.id
+    )
+    db.session.add(employee)
+    db.session.commit()
+    try:
+        send_employee_created_email(
+            recipient=data["email"].strip().lower(),
+            name=data["fName"].strip().title(),
+            url="https://mykinyozi.com",
+            shop_name=current_user.shop_name
+        )
+    except Exception as e:
+        print(e)
+        return jsonify(dict(message="Something went wrong. Try again")), 401
+    return jsonify(dict(message="Employee Created")), 201

@@ -1,5 +1,7 @@
 from flask_restful import fields, marshal
 
+# Data Serializers
+
 
 def serialize_shop(shop):
     user_fields = {
@@ -91,3 +93,19 @@ def serialize_equipment(equipment):
         price=fields.Integer
     )
     return marshal(equipment, equipment_fields)
+
+
+def serialize_employee(employee):
+    employee_fields = dict(
+        id=fields.Integer,
+        public_id=fields.String,
+        f_name=fields.String,
+        l_name=fields.String,
+        email=fields.String,
+        role=fields.String,
+        password=fields.String,
+        salary=fields.Integer,
+        create_date=fields.DateTime,
+        active=fields.Boolean
+    )
+    return marshal(employee, employee_fields)
