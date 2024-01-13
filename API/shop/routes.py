@@ -46,11 +46,10 @@ def all_shops():
         Fetch all barbershops
         :return: 200
     """
-    shops_all = BarberShop.query.order_by(BarberShop.join_date.desc()).all()
-    if len(shops_all) == 0:
-        return jsonify(dict(message="No shops created"))
+    name = request.args.get("name").strip().title()
+    shops_all = BarberShop.query.filter_by(shop_name=name).order_by(BarberShop.shop_name.desc()).all()
     shops_data = []
-    for shop in shops_all:
+    for shop in shops_all[:10]:
         shops_data.append(serialize_shop(shop))
     return jsonify(dict(data=shops_data)), 200
 
