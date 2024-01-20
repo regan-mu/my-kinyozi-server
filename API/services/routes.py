@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from API.models import Service, BarberShop
-from API import db
+from API import db, bcrypt
 import datetime
 from ..utils import shop_login_required, verify_api_key
 from ..serializer import serialize_services
@@ -18,27 +18,23 @@ def add_services(current_user, public_id):
         :return: 404, 201
     """
     # NOTE: Avoid adding services that are already in created.
-    existing_services = []
-    data = request.get_json()["services"]
+    data = request.get_json()
     if current_user.public_id != public_id:
         return jsonify(dict(message="You do not have permissions to access this resource")), 401
 
-    for service_data in data:
-        if service_data["serviceName"].strip().lower() not in [
-            service.service.lower() for service in current_user.services
-        ]:
-            new_service = Service(
-                service=service_data["serviceName"].strip().title(),
-                charges=service_data["chargeAmount"],
-                description=service_data["serviceDescription"].strip().title(),
-                modified_at=datetime.datetime.utcnow(),
-                shop_id=current_user.id
-            )
-            db.session.add(new_service)
-        else:
-            existing_services.append(service_data["serviceName"])
-    db.session.commit()
-    return jsonify(dict(message="Services have been added successfully", existing_services=existing_services)), 201
+    if data["serviceName"].strip().lower() not in [service.service.lower() for service in current_user.services]:
+        new_service = Service(
+            service=data["serviceName"].strip().title(),
+            charges=data["chargeAmount"],
+            description=data["serviceDescription"].strip().title(),
+            modified_at=datetime.datetime.utcnow(),
+            shop_id=current_user.id
+        )
+        db.session.add(new_service)
+        db.session.commit()
+        return jsonify(dict(message="Service has been added successfully")), 201
+    else:
+        return jsonify(dict(message="This service already exists")), 401
 
 
 @services.route("/API/service/update/<int:service_id>", methods=["PUT"])
@@ -83,6 +79,9 @@ def delete_service(current_user, service_id):
 
     if service_id not in [service.id for service in current_user.services]:
         return jsonify(dict(message="You do not have permissions to access this resource")), 401
+    data = request.get_json()
+    if not bcrypt.check_password_hash(current_user.password, data["password"].strip()):
+        return jsonify(dict(message="Incorrect Password")), 401
 
     db.session.delete(service)
     db.session.commit()
@@ -94,6 +93,6 @@ def delete_service(current_user, service_id):
 def fetch_all_services(public_id):
     shop = BarberShop.query.filter_by(public_id=public_id).first()
     all_services = []
-    for service in shop.services:
+    for service in shop.services.order_by(Service.modified_at.desc()):
         all_services.append(serialize_services(service))
     return jsonify(dict(services=all_services))

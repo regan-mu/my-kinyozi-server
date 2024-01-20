@@ -46,7 +46,7 @@ def read_notification(current_user, notification_id):
         return jsonify(dict(message="Not Allowed")), 401
 
     notification.read = True
-    db.session.commi()
+    db.session.commit()
     return jsonify(dict(message="Notification read")), 200
 
 
@@ -67,7 +67,7 @@ def fetch_all_notification(current_user, public_id):
         return jsonify(message="Not allowed"), 401
 
     all_notifications = []
-    for notification in shop.notifications:
+    for notification in shop.notifications.order_by(Notification.created_at.desc()):
         all_notifications.append(serialize_notification(notification))
 
     return jsonify(dict(notifications=all_notifications)), 200

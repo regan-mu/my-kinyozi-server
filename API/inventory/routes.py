@@ -1,8 +1,8 @@
 import datetime
 from flask import Blueprint, request, jsonify
-from API import db
+from API import db, bcrypt
 from API.models import Inventory, BarberShop
-from ..utils import shop_login_required, send_low_inventory_email
+from ..utils import shop_login_required, send_low_inventory_email, verify_api_key
 from ..serializer import serialize_inventory
 
 inventory = Blueprint("inventory", __name__)
@@ -33,6 +33,7 @@ def add_inventory(current_user, public_id):
 
 
 @inventory.route("/API/inventory/update/<int:inventory_id>", methods=["PUT"])
+@verify_api_key
 def update_inventory(inventory_id):
     """
         Update inventory
@@ -67,6 +68,7 @@ def update_inventory(inventory_id):
 
 
 @inventory.route("/API/inventory/fetch/<string:public_id>", methods=["GET"])
+@verify_api_key
 def fetch_all_inventory(public_id):
     """
         Fetch all inventory associated to the barbershop
@@ -84,15 +86,21 @@ def fetch_all_inventory(public_id):
 
 
 @inventory.route("/API/inventory/delete/<int:inventory_id>", methods=["DELETE"])
-def delete_inventory(inventory_id):
+@shop_login_required
+def delete_inventory(current_user, inventory_id):
     """
         Delete inventory item
         :param inventory_id: id of inventory to be deleted
+        :param current_user: Logged in Shop Owner
         :return:
     """
     record = Inventory.query.filter_by(id=inventory_id).first()
     if not record:
         return jsonify(dict(message="Inventory Item not found")), 404
+
+    data = request.get_json()
+    if not bcrypt.check_password_hash(current_user.password, data["password"].strip()):
+        return jsonify(dict(message="Incorrect Password")), 401
 
     db.session.delete(record)
     db.session.commit()
@@ -100,6 +108,7 @@ def delete_inventory(inventory_id):
 
 
 @inventory.route("/API/inventory/replenish/<int:inventory_id>", methods=["PUT"])
+@verify_api_key
 def replenish_inventory(inventory_id):
     """
         Replenish the inventory item to normal levels
@@ -109,6 +118,13 @@ def replenish_inventory(inventory_id):
     inventory_record = Inventory.query.filter_by(id=inventory_id).first()
     if not inventory_record:
         return jsonify(dict(message="Record not found")), 404
+
+    if inventory_record.product_level == 3:
+        return jsonify(dict(message="Can't be replenished further")), 401
+
+    data = request.get_json()
+    if not bcrypt.check_password_hash(inventory_record.shop.password, data["password"].strip()):
+        return jsonify(dict(message="Incorrect Password")), 401
 
     inventory_record.product_level = 3
     inventory_record.modified_at = datetime.datetime.utcnow()

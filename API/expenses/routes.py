@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from API.models import ExpenseAccounts, BarberShop, Expenses
-from API import db
+from API import db, bcrypt
 import datetime
 from ..utils import shop_login_required, verify_api_key
 from ..serializer import serialize_accounts, serialize_expenses
@@ -20,11 +20,11 @@ def create_expense_account(current_user, public_id):
     # NOTE: Avoid adding services that are already in created.
     data = request.get_json()
     if current_user.public_id != public_id:
-        return jsonify(dict(message="You do not have permissions to access this resource")), 401
+        return jsonify(dict(message="Permission Denied")), 401
 
     if data["accountName"].strip().lower() in [acc.account_name.lower() for acc in current_user.expense_accounts]:
         return jsonify(dict(
-            message=f"{data['accountName']} account already exists. Consider updating or deleting"
+            message=f"{data['accountName']} account already exists."
         )), 409
 
     new_account = ExpenseAccounts(
@@ -34,7 +34,7 @@ def create_expense_account(current_user, public_id):
     )
     db.session.add(new_account)
     db.session.commit()
-    return jsonify(dict(message="Expense account has been created successfully")), 201
+    return jsonify(dict(message="Expense account has been created.")), 201
 
 
 @expenses.route("/API/expense-accounts/fetch/<string:public_id>", methods=["GET"])
@@ -49,7 +49,7 @@ def fetch_all_expense_accounts(public_id):
     shop = BarberShop.query.filter_by(public_id=public_id).first()
     if not shop:
         return jsonify(dict(message="Barbershop not found")), 404
-    for acc in shop.expense_accounts.order_by(ExpenseAccounts.account_name).all():
+    for acc in shop.expense_accounts.order_by(ExpenseAccounts.id).all():
         all_accounts.append(serialize_accounts(acc))
     return jsonify(dict(accounts=all_accounts)), 200
 
@@ -91,7 +91,18 @@ def delete_expense_account(current_user, account_id):
         return jsonify(dict(message="Expense Account not found")), 404
 
     if account_id not in [acc.id for acc in current_user.expense_accounts]:
-        return jsonify(dict(message="You don't have the permission to perform this action")), 401
+        return jsonify(dict(message="Permission Denied")), 401
+
+    data = request.get_json()
+    if not bcrypt.check_password_hash(current_user.password, data["password"].strip()):
+        return jsonify(dict(message="Incorrect Password")), 401
+
+    # Count to find id an account has any expenses associated cz we don't want to delete accounts that have expenses
+    expenses_count = 0
+    for _ in expense_account.expense:
+        if expenses_count > 0:
+            return jsonify(dict(message="Not Allowed! Delete associated expenses first")), 401
+        expenses_count += 1
 
     db.session.delete(expense_account)
     db.session.commit()
@@ -99,33 +110,29 @@ def delete_expense_account(current_user, account_id):
 
 
 # EXPENSES
-@expenses.route("/API/expenses/fetch/<string:public_id>/<string:month>/<string:year>", methods=["GET"])
+@expenses.route("/API/expenses/fetch/<string:public_id>", methods=["GET"])
 @shop_login_required
-def fetch_expenses(current_user, public_id, month, year):
+def fetch_expenses(current_user, public_id):
     """
         Fetch the expenses for the barbershop
         :param public_id: public_id for the expenses
         :param current_user: Logged-in shop owner
-        :param month: Month for which to fetch the expenses for. if 'all' fetch data for all months
-        :param year: Year for which to fetch the expenses for. if 'all' fetch data for all years
         :return: 401, 200
     """
     if current_user.public_id != public_id:
         return jsonify(dict(message="You do not have permission to perform this action")), 401
 
-    if year != "all" and month == "all":
-        all_expenses = Expenses.query.filter_by(year=int(year)).order_by(Expenses.created_at.desc()).all()
-    elif year != "all" and month != "all":
-        all_expenses = Expenses.query.filter_by(year=int(year), month=int(month)).order_by(Expenses.created_at.desc())\
-            .all()
-    else:
-        all_expenses = Expenses.query.order_by(Expenses.created_at.desc()).all()
-
+    all_expenses = Expenses.query.order_by(Expenses.created_at.desc()).all()
+    all_years = [sale.year for sale in Expenses.query.all()]
+    unique_years = list(set(all_years))
+    all_accounts = [{"account": acc.account_name, "accountId": acc.id} for acc in current_user.expense_accounts]
     current_user_expenses = []
     for expense in all_expenses:
         if expense.account.shop.public_id == current_user.public_id:
-            current_user_expenses.append(dict(serialize_expenses(expense)))
-    return jsonify(dict(expenses=current_user_expenses)), 200
+            expense_info = serialize_expenses(expense)
+            expense_info["account"] = expense.account.account_name
+            current_user_expenses.append(expense_info)
+    return jsonify(dict(expenses=current_user_expenses, years=unique_years, accounts=all_accounts)), 200
 
 
 @expenses.route("/API/expense/create/<string:public_id>", methods=["POST"])
@@ -168,6 +175,10 @@ def delete_expense(current_user, expense_id):
 
     if expense.account.shop.public_id != current_user.public_id:
         return jsonify(dict(message="You don't permission to perform this action")), 401
+
+    data = request.get_json()
+    if not bcrypt.check_password_hash(current_user.password, data["password"].strip()):
+        return jsonify(dict(message="Incorrect password")), 401
 
     db.session.delete(expense)
     db.session.commit()

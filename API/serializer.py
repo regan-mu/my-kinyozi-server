@@ -43,7 +43,9 @@ def serialize_sales(sale):
         id=fields.Integer,
         payment_method=fields.String,
         description=fields.String,
-        date_created=fields.String
+        date_created=fields.String,
+        month=fields.Integer,
+        year=fields.Integer
     )
     return marshal(sale, sale_fields)
 
