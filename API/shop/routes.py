@@ -129,7 +129,7 @@ def update_shop(current_user, public_id):
         return jsonify(dict(message="You do not have permissions to perform this action")), 401
     shop = BarberShop.query.filter_by(public_id=public_id).first()
     data = request.get_json()
-    shop.shop_name = data["name"].strip().title()
+    shop.shop_name = data["shop_name"].strip().title()
     shop.email = data["email"].strip()
     shop.phone = data["phone"].strip()
     shop.county = data["county"].strip().title()

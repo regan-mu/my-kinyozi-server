@@ -52,9 +52,9 @@ def shop_login_required(f):
             data = jwt.decode(token, os.environ.get('SECRET'), algorithms=["HS256"])
             current_user = BarberShop.query.filter_by(public_id=data["public_id"]).first()
         except jwt.ExpiredSignatureError:
-            return jsonify({"message": "Expired Session! Log In Again"}), 401
+            return jsonify({"message": "Expired Session! Login Again"}), 401
         except jwt.InvalidTokenError:
-            return jsonify({"message": "Login Again"}), 401
+            return jsonify({"message": "Invalid Token. Please Login Again"}), 401
         return f(current_user, *args, **kwargs)
     return decorated
 

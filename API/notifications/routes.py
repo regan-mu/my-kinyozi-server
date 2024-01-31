@@ -52,7 +52,7 @@ def read_notification(current_user, notification_id):
 
 @notifications_blueprint.route("/API/notifications/fetch/all/<string:public_id>", methods=["GET"])
 @shop_login_required
-def fetch_all_notification(current_user, public_id):
+def fetch_all_notifications(current_user, public_id):
     """
         Fetch all notifications for a
     :param current_user:
