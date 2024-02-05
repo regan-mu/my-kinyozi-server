@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response
-from API.models import BarberShop, Service, Employee
+from API.models import BarberShop, Sale, Employee, Service, Expenses, ExpenseAccounts
 from API import db, bcrypt
-from API.serializer import serialize_shop, serialize_services
+from API.serializer import serialize_shop
 import secrets
 import datetime
 import jwt
@@ -14,6 +14,8 @@ from ..utils import (
     verify_api_key,
     send_employee_created_email
 )
+from sqlalchemy import func
+from collections import Counter
 
 shops = Blueprint('shops', __name__)
 
@@ -27,16 +29,100 @@ def get_shop(current_user, public_id):
         :param public_id: Barbershop public_id
         :return: 401, 404, 200
     """
+    current_month = datetime.datetime.utcnow().month
+    current_year = datetime.datetime.utcnow().year
+
     shop = BarberShop.query.filter_by(public_id=public_id).first()
     if current_user.public_id != public_id:
         return jsonify(dict(message="You don't have permission to access the resource")), 401
     if not shop:
         return jsonify(dict(message="Shop doesn't exist")), 404
     shop_info = serialize_shop(shop)
-    all_services = []
-    for service in shop.services.order_by(Service.charges):
-        all_services.append(serialize_services(service))
-    return jsonify(shopInfo=shop_info, services=all_services), 200
+
+    # All Sales Data
+    all_sales = []
+    result = (
+        db.session.query(func.date(Sale.date_created).label('day'), func.sum(Service.charges).label('sales'))
+        .join(Service, Sale.service_id == Service.id)
+        .filter(Service.shop == shop)
+        .group_by(func.date(Sale.date_created))
+        .order_by(func.date(Sale.date_created))
+        .all()
+    )
+
+    # Sales Data
+    for row in result:
+        all_sales.append({"day": row.day.strftime("%Y-%m-%d"), "sales": row.sales})
+
+    # Number of Unread Notifications
+    unread_notifications = 0
+    for notification in shop.notifications:
+        if not notification.read:
+            unread_notifications += 1
+
+    # Payment Methods
+    methods = [sale.payment_method for sale in shop.sales]
+    payment_methods = [{'method': item, 'transactions': count} for item, count in Counter(methods).items()]
+
+    # Expenses
+    expenses_result = (
+        db.session.query(
+            ExpenseAccounts.account_name,
+            func.sum(Expenses.amount).label('total_expenses')
+        )
+        .join(Expenses, Expenses.expense_account == ExpenseAccounts.id)
+        .filter(ExpenseAccounts.shop == shop)
+        .group_by(ExpenseAccounts.account_name)
+        .all()
+    )
+    all_expenses = []
+    for row in expenses_result:
+        all_expenses.append({"account": row.account_name, "amount": row.total_expenses})
+
+    # Current Month Expenses
+    month_expenses = 0
+    for account in shop.expense_accounts:
+        for expense in account.expense:
+            if expense.month == current_month and expense.year == current_year:
+                month_expenses += expense.amount
+
+    # Equipment Value
+    equipments_value = 0
+    for equipment in shop.equipments:
+        equipments_value += equipment.price
+
+    # Most popular service
+    popular_service = (
+        db.session.query(
+            Service.service,
+            func.count().label('sales_count')
+        )
+        .join(Sale)
+        .filter(Service.shop == shop)
+        .group_by(Service.service)
+        .order_by(func.count().desc())
+        .first()
+    )
+
+    # Current Month Sales
+    month_sales = 0
+    test = []
+    for sale in shop.sales:
+        if sale.month == current_month and sale.year == current_year:
+            test.append(sale.service.charges)
+            month_sales += sale.service.charges
+
+    return jsonify(
+        shopInfo=shop_info,
+        sales=all_sales,
+        notifications=unread_notifications,
+        payment_methods=payment_methods,
+        expenses=all_expenses,
+        current_month_expenses=month_expenses,
+        current_month_sales=month_sales,
+        popular_service=popular_service.service if popular_service else None,
+        equipment_value=equipments_value
+    ), 200
 
 
 @shops.route("/API/shops/all", methods=["GET"])
@@ -47,7 +133,7 @@ def all_shops():
         :return: 200
     """
     name = request.args.get("name", "").strip().title()
-    shops_all = BarberShop.query.filter(BarberShop.shop_name.ilike(f'%{name}%'))\
+    shops_all = BarberShop.query.filter(BarberShop.shop_name.ilike(f'%{name}%')) \
         .order_by(BarberShop.shop_name.desc()).all()
     shops_data = []
     for shop in shops_all[:10]:
@@ -66,7 +152,7 @@ def shop_signup():
     public_id = secrets.token_hex(6)
     matching_public_id_found = BarberShop.query.filter_by(public_id=public_id).first()
     if matching_public_id_found:
-        public_id = secrets.token_hex(6)+secrets.token_hex(1)
+        public_id = secrets.token_hex(6) + secrets.token_hex(1)
 
     password_hash = bcrypt.generate_password_hash(data["password"].strip()).decode("utf-8")
 
@@ -274,6 +360,5 @@ def create_employee(current_user, public_id):
             shop_name=current_user.shop_name
         )
     except Exception as e:
-        print(e)
         return jsonify(dict(message="Something went wrong. Try again")), 401
     return jsonify(dict(message="Employee Created")), 201

@@ -21,7 +21,6 @@ def add_services(current_user, public_id):
     data = request.get_json()
     if current_user.public_id != public_id:
         return jsonify(dict(message="You do not have permissions to access this resource")), 401
-    print(data)
     if data["serviceName"].strip().lower() not in [service.service.lower() for service in current_user.services]:
         new_service = Service(
             service=data["serviceName"].strip().title(),

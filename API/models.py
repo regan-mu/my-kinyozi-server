@@ -23,6 +23,7 @@ class BarberShop(db.Model):
     notifications = db.relationship("Notification", backref="shop", lazy="dynamic", cascade='all, delete-orphan')
     equipments = db.relationship("Equipment", backref="shop", lazy="dynamic", cascade="all, delete-orphan")
     employees = db.relationship("Employee", backref="shop", lazy="dynamic", cascade="all, delete-orphan")
+    sales = db.relationship("Sale", backref="shop", lazy="dynamic", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"({self.name}, {self.email})"
