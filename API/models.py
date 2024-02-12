@@ -149,7 +149,8 @@ class Employee(db.Model):
     password = db.Column(db.Text, nullable=True)
     salary = db.Column(db.Integer, nullable=True)
     create_date = db.Column(db.DateTime, default=datetime.utcnow)
-    active = db.Column(db.Boolean, default=True)
+    phone = db.Column(db.String(20), nullable=True)
+    active = db.Column(db.Boolean, default=False)
     shop_id = db.Column(db.Integer, db.ForeignKey("barbershops.id"))
 
     def __repr__(self):

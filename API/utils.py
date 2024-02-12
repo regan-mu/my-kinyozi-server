@@ -1,6 +1,6 @@
 import jwt
 import os
-from API.models import BarberShop
+from API.models import BarberShop, Employee
 from flask import request, jsonify, render_template
 from functools import wraps
 import datetime
@@ -56,6 +56,36 @@ def shop_login_required(f):
         except jwt.InvalidTokenError:
             return jsonify({"message": "Invalid Token. Please Login Again"}), 401
         return f(current_user, *args, **kwargs)
+    return decorated
+
+
+def employee_login_required(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        token = None
+        api_key = None
+        if "X-API-KEY" in request.headers:
+            api_key = request.headers["X-API-KEY"]
+
+        if not api_key:
+            return jsonify({"message": "API KEY is missing"}), 401
+
+        if api_key != os.environ.get("API_KEY"):
+            return jsonify({"message": "Invalid API KEY"}), 401
+
+        if "x-access-token" in request.headers:
+            token = request.headers["x-access-token"]
+        if not token:
+            return jsonify({"message": "Token is missing"}), 401
+        try:
+            data = jwt.decode(token, os.environ.get('SECRET'), algorithms=["HS256"])
+            current_user = Employee.query.filter_by(public_id=data["public_id"]).first()
+        except jwt.ExpiredSignatureError:
+            return jsonify({"message": "Expired Session! Login Again"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"message": "Invalid Token. Please Login Again"}), 401
+        return func(current_user, *args, **kwargs)
+
     return decorated
 
 
