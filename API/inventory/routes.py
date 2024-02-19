@@ -45,8 +45,10 @@ def update_inventory(inventory_id):
         return jsonify(dict(message="Record not found")), 404
 
     data = request.get_json()
+    if inventory_record.shop.public_id != data["shopId"]:
+        return jsonify(dict(message="Not Allowed")), 401
 
-    if data["productLevel"] <= 2 and inventory_record.product_level > 2:
+    if int(data["productLevel"]) <= 2 and inventory_record.product_level > 2:
         shop_email = inventory_record.shop.email
         product_name = inventory_record.product_name
         shop_name = inventory_record.shop.shop_name

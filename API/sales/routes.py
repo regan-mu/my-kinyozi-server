@@ -21,6 +21,7 @@ def record_sale(public_id):
         return jsonify(dict(message="Barbershop doesn't exist")), 404
 
     data = request.get_json()
+
     new_sale = Sale(
         payment_method=data["paymentMethod"].strip().title(),
         description=data["paymentDescription"].strip().title(),

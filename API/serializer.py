@@ -106,7 +106,6 @@ def serialize_employee(employee):
         email=fields.String,
         role=fields.String,
         phone=fields.String,
-        password=fields.String,
         salary=fields.Integer,
         create_date=fields.DateTime,
         active=fields.Boolean

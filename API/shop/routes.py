@@ -32,10 +32,12 @@ def get_shop(current_user, public_id):
     current_year = datetime.datetime.utcnow().year
 
     shop = BarberShop.query.filter_by(public_id=public_id).first()
-    if current_user.public_id != public_id:
-        return jsonify(dict(message="You don't have permission to access the resource")), 401
     if not shop:
         return jsonify(dict(message="Shop doesn't exist")), 404
+
+    if current_user.public_id != public_id:
+        return jsonify(dict(message="You don't have permission to access the resource")), 401
+
     shop_info = serialize_shop(shop)
 
     # All Sales Data
@@ -196,7 +198,7 @@ def shop_login():
             os.environ.get('SECRET'),
             algorithm="HS256"
         )
-        return jsonify({"Token": token, "public_id": shop.public_id, "email": shop.email, "name": shop.shop_name}), 200
+        return jsonify({"Token": token, "public_id": shop.public_id}), 200
     else:
         return make_response("Incorrect password", 401, {"WWW.Authenticate": "Basic realm=Login required!"})
 

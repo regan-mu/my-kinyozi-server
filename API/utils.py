@@ -1,11 +1,13 @@
 import jwt
 import os
-from API.models import BarberShop, Employee
+from API import db
+from API.models import BarberShop, Employee, BarbersAppToken
 from flask import request, jsonify, render_template
 from functools import wraps
 import datetime
 from flask_mail import Message
 from API import mail
+import requests
 
 
 def verify_token(token):
@@ -68,10 +70,10 @@ def employee_login_required(func):
             api_key = request.headers["X-API-KEY"]
 
         if not api_key:
-            return jsonify({"message": "API KEY is missing"}), 401
+            return jsonify({"message": "API KEY is missing"}), 403
 
         if api_key != os.environ.get("API_KEY"):
-            return jsonify({"message": "Invalid API KEY"}), 401
+            return jsonify({"message": "Invalid API KEY"}), 403
 
         if "x-access-token" in request.headers:
             token = request.headers["x-access-token"]
@@ -178,3 +180,55 @@ def send_employee_created_email(recipient, name, url, shop_name):
     mail.send(message)
 
 
+def fetch_token_from_mobile_app():
+    """
+        Fetch the authentication token from the mobile app backend
+        :return: jwt token
+    """
+    url = r"https://app.mykinyozi.com/api/auth/login"
+    data = {
+        "email": os.environ.get("KINYOZI_MOBILE_EMAIL"),
+        "password": os.environ.get("KINYOZI_MOBILE_PASSWORD")
+    }
+    response = requests.post(url=url, json=data)
+    token = response.json().get("token")
+    return token
+
+
+def auth_mobile_app():
+    """
+        Authentication to access the data from the app
+        :return: JWT Token
+    """
+
+    bearer_token = BarbersAppToken.query.filter_by(name="bearer_token").first()
+    if not bearer_token:
+        # If no token, authenticate the app and save the token to db
+        token = fetch_token_from_mobile_app()
+        save_token = BarbersAppToken(name="bearer_token", token=token)
+        db.session.add(save_token)
+        db.session.commit()
+        return token
+    else:
+        # Check if the token is expired, if expired/invalid, load new one
+        try:
+            decoded_token = jwt.decode(
+                bearer_token.token,
+                os.environ.get("JWT_SECRET"),
+                algorithms=["HS256"],
+                options={"verify_signature": False}
+            )
+            current_timestamp = datetime.datetime.utcnow()
+            token_expiry = decoded_token.get('exp')
+            # Generate new token if previous one is expired.
+            if current_timestamp > datetime.datetime.utcfromtimestamp(token_expiry):
+                token = fetch_token_from_mobile_app()
+                bearer_token.token = token
+                db.session.commit()
+                return token
+        except jwt.exceptions.InvalidTokenError:
+            token = fetch_token_from_mobile_app()
+            bearer_token.token = token
+            db.session.commit()
+            return token
+    return bearer_token.token

@@ -155,3 +155,12 @@ class Employee(db.Model):
 
     def __repr__(self):
         return f"Employee({self.f_name}, {self.l_name})"
+
+
+class BarbersAppToken(db.Model):
+    """Stores the token to access the barbers on the mobile App"""
+    __tablename__ = "token"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(15), default="bearer_token", unique=True)
+    token = db.Column(db.String(1000), nullable=True)
