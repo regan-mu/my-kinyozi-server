@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response
 from API.models import BarberShop, Sale, Service, Expenses, ExpenseAccounts
 from API import db, bcrypt
-from API.serializer import serialize_shop
+from API.serializer import serialize_shop, serialize_services
 import secrets
 import datetime
 import jwt
@@ -104,13 +104,13 @@ def get_shop(current_user, public_id):
         .order_by(func.count().desc())
         .first()
     )
-
+    all_services = []
+    for service in shop.services:
+        all_services.append(serialize_services(service))
     # Current Month Sales
     month_sales = 0
-    test = []
     for sale in shop.sales:
         if sale.month == current_month and sale.year == current_year:
-            test.append(sale.service.charges)
             month_sales += sale.service.charges
 
     return jsonify(
@@ -122,7 +122,8 @@ def get_shop(current_user, public_id):
         current_month_expenses=month_expenses,
         current_month_sales=month_sales,
         popular_service=popular_service.service if popular_service else None,
-        equipment_value=equipments_value
+        equipment_value=equipments_value,
+        services=all_services
     ), 200
 
 

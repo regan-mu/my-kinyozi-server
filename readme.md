@@ -1,5 +1,5 @@
 # My Kinyozi App Backend
-This repository contains all the backend and code and endpoints
+This repository contains all the backend code and endpoints
 serving the [mykinyozi.com](https://mykinyozi.com).
 
 * Developed by: Regan Muthomi
