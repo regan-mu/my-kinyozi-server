@@ -206,6 +206,8 @@ def employee_login():
         return make_response("Could not verify", 401, {"WWW.Authenticate": "Basic realm=Login required!"})
     if not employee:
         return make_response("Incorrect Email", 404, {"WWW.Authenticate": "Basic realm=Login required!"})
+    if not employee.password:
+        return make_response("Password not Set", 401, {"WWW.Authenticate": "Basic realm=Login required!"})
     if bcrypt.check_password_hash(employee.password, auth["password"].strip()):
         token = jwt.encode(
             {
